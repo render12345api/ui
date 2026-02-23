@@ -114,9 +114,9 @@ app.post('/api/burst', auth, async (req, res) => {
     }
 
     // Call SMS burst API
-    const response = await fetch('https://api-oo7r.onrender.com/api/job/start', {
+    const response = await fetch('https://api.smsburst.online/api/job/start', {
       method: 'POST',
-      headers: { 'X-API-Key': 'bmw', 'Content-Type': 'application/json' },
+      headers: { 'X-API-Key': 'render123', 'Content-Type': 'application/json' },
       body: JSON.stringify({
         targets: [phone],        // e.g. "9977885544" — exactly as typed
         mode: mode || 'Normal',
@@ -147,9 +147,9 @@ app.post('/api/burst/stop', auth, async (req, res) => {
   const { job_id } = req.body;
   if (!job_id) return res.status(400).json({ error: 'job_id required' });
   try {
-    const response = await fetch(`https://api-oo7r.onrender.com/api/job/${job_id}/stop`, {
+    const response = await fetch(`https://api.smsburst.online/api/job/${job_id}/stop`, {
       method: 'POST',
-      headers: { 'X-API-Key': 'bmw' }
+      headers: { 'X-API-Key': 'render123' }
     });
     const data = await response.json();
     res.json({ success: true, job_id, status: 'stopped', data });
