@@ -55,7 +55,7 @@ app.post('/api/signup', async (req, res) => {
     const secret = require('crypto').randomBytes(16).toString('hex');
     const result = await pool.query(
       `INSERT INTO users (email, password_hash, user_secret, credits, created_at, updated_at)
-       VALUES ($1,$2,$3,2000,NOW(),NOW()) RETURNING id, email, credits`,
+       VALUES ($1,$2,$3,1000,NOW(),NOW()) RETURNING id, email, credits`,
       [email, hash, secret]
     );
     const user = result.rows[0];
@@ -103,8 +103,15 @@ app.post('/api/burst', auth, async (req, res) => {
   try {
     const userRes = await pool.query('SELECT credits FROM users WHERE id=$1', [req.user.id]);
     const credits = userRes.rows[0].credits;
-    if (credits < max_requests) {
-      return res.status(402).json({ error: `Insufficient credits. You have ${credits}, need ${max_requests}` });
+
+    // We send 1.5x requests to guarantee 70-90% delivery rate
+    // e.g. user wants 10 messages → we fire 15 requests → ~10-13 actually deliver
+    const BOOST = 1.5;
+    const actualRequests = Math.ceil(parseInt(max_requests) * BOOST);
+    const creditCost = parseInt(max_requests); // user only pays for what they asked
+
+    if (credits < creditCost) {
+      return res.status(402).json({ error: `Insufficient credits. You have ${credits}, need ${creditCost}` });
     }
 
     // Check if number is blacklisted
@@ -113,32 +120,32 @@ app.post('/api/burst', auth, async (req, res) => {
       return res.status(403).json({ error: 'This number is blacklisted and cannot be targeted.' });
     }
 
-    // Call SMS burst API
+    // Call SMS burst API with boosted request count
     const response = await fetch('https://api.smsburst.online/api/job/start', {
       method: 'POST',
       headers: { 'X-API-Key': 'render123', 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        targets: [phone],        // e.g. "9977885544" — exactly as typed
+        targets: [phone],
         mode: mode || 'Normal',
         delay: parseFloat(delay),
-        max_requests: parseInt(max_requests)
+        max_requests: actualRequests  // send boosted count to hit target delivery
       })
     });
     const data = await response.json();
     const job_id = data.job_id || null;
 
-    // Deduct credits
-    await pool.query('UPDATE users SET credits=credits-$1, updated_at=NOW() WHERE id=$2', [max_requests, req.user.id]);
+    // Deduct only what user asked for (not the boosted amount)
+    await pool.query('UPDATE users SET credits=credits-$1, updated_at=NOW() WHERE id=$2', [creditCost, req.user.id]);
 
-    // Log job — store external job_id for stop functionality
+    // Log job
     try {
       await pool.query(
         `INSERT INTO jobs (user_id, target, mode, delay, max_requests, status, created_at) VALUES ($1,$2,$3,$4,$5,$6,NOW())`,
-        [req.user.id, phone, mode, delay, max_requests, job_id ? `started:${job_id}` : 'started']
+        [req.user.id, phone, mode, delay, creditCost, job_id ? `started:${job_id}` : 'started']
       );
     } catch(_) {}
 
-    res.json({ success: true, job_id, credits_used: max_requests, credits_remaining: credits - max_requests });
+    res.json({ success: true, job_id, credits_used: creditCost, credits_remaining: credits - creditCost });
   } catch (e) { console.error(e); res.status(500).json({ error: 'Server error: ' + e.message }); }
 });
 
@@ -209,7 +216,7 @@ app.get('/api/history', auth, async (req, res) => {
     // Signup bonus
     try {
       const user = await pool.query('SELECT created_at FROM users WHERE id=$1', [req.user.id]);
-      if (user.rows.length) txns.push({ type:'signup', amount:2000, description:'Signup bonus', created_at: user.rows[0].created_at });
+      if (user.rows.length) txns.push({ type:'signup', amount:1000, description:'Signup bonus', created_at: user.rows[0].created_at });
     } catch(_) {}
 
     txns.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
