@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SMSBurst — Elite Control Panel</title>
+<style>
+  /* System font fallbacks that work offline — same cyberpunk feel */
+  @font-face {
+    font-family: 'Orbitron';
+    src: local('Courier New Bold'), local('CourierNewPS-BoldMT');
+    font-weight: 700 900;
+  }
+</style>
+<style>
+:root {
+  --bg:    #020509;
+  --bg2:   #030810;
+  --panel: #060e1a;
+  --card:  #071020;
+  --card2: #0a1528;
+  --g:     #00ff88;
+  --g2:    #00cc6a;
+  --g3:    #00ff8822;
+  --g4:    #00ff8808;
+  --grim:  #00ff8830;
+  --r:     #ff2d55;
+  --r2:    #ff6080;
+  --rg:    #ff2d5520;
+  --c:     #00d4ff;
+  --cg:    #00d4ff15;
+  --rim:   #0f2030;
+  --rim2:  #1a3050;
+  --rim3:  #0a1a28;
+  --txt:   #e8f4ff;
+  --txt2:  #6a9ab0;
+  --txt3:  #2a4a60;
+  --mono:  'Courier New', 'Lucida Console', monospace;
+  --head:  'Courier New', 'Lucida Console', monospace;
+  --body:  -apple-system, 'Segoe UI', Arial, sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--body);background:var(--bg);color:var(--txt);min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+
+/* Scanlines */
+body::before{content:'';position:fixed;inset:0;z-index:9998;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);max-width:430px;margin:auto}
+
+/* Grid bg */
+.grid-bg{position:fixed;inset:0;max-width:430px;margin:auto;pointer-events:none;z-index:0;overflow:hidden;background-image:linear-gradient(rgba(0,255,136,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,136,.025) 1px,transparent 1px);background-size:36px 36px}
+.grid-bg::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(0,255,136,.07) 0%,transparent 70%);animation:bgP 7s ease-in-out infinite alternate}
+.grid-bg::after{content:'';position:absolute;bottom:-20%;right:-10%;width:70%;height:60%;background:radial-gradient(ellipse,rgba(0,212,255,.04) 0%,transparent 70%);animation:bgP 9s ease-in-out infinite alternate-reverse}
+@keyframes bgP{from{opacity:.5}to{opacity:1}}
+
+/* Screens */
+.screen{display:none;flex-direction:column;min-height:100vh;position:relative;z-index:1}
+.screen.active{display:flex}
+
+/* ── AUTH ── */
+.auth-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:44px 28px;position:relative;z-index:2}
+.auth-corner{position:absolute;width:48px;height:48px;pointer-events:none}
+.auth-corner.tl{top:24px;left:24px;border-top:2px solid var(--g);border-left:2px solid var(--g)}
+.auth-corner.tr{top:24px;right:24px;border-top:2px solid var(--g);border-right:2px solid var(--g)}
+.auth-corner.bl{bottom:104px;left:24px;border-bottom:2px solid var(--g);border-left:2px solid var(--g)}
+.auth-corner.br{bottom:104px;right:24px;border-bottom:2px solid var(--g);border-right:2px solid var(--g)}
+
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:50px}
+.brand-mark{width:46px;height:46px;border-radius:4px;background:var(--g3);border:1px solid var(--grim);display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 24px var(--g3),inset 0 0 20px rgba(0,255,136,.04)}
+.brand-name{font-family:var(--head);font-size:16px;font-weight:700;letter-spacing:2px}
+.brand-name b{color:var(--g);text-shadow:0 0 14px var(--g)}
+.auth-sys{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--g);margin-bottom:8px;opacity:.7}
+.auth-sys::before{content:'> '}
+.auth-h1{font-family:var(--head);font-size:26px;font-weight:900;letter-spacing:1px;line-height:1.2;margin-bottom:10px}
+.auth-h1 .hi{color:var(--g);text-shadow:0 0 24px var(--g)}
+.auth-sub{font-size:14px;color:var(--txt2);margin-bottom:32px;line-height:1.6;font-weight:500}
+
+.field{margin-bottom:14px}
+.field label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--txt3);margin-bottom:8px}
+.field input{width:100%;background:var(--card);border:1px solid var(--rim);border-radius:4px;padding:13px 16px;color:var(--txt);font-family:var(--mono);font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s;clip-path:polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)}
+.field input:focus{border-color:var(--g);box-shadow:0 0 0 1px var(--grim),0 0 20px var(--g3)}
+.field input::placeholder{color:var(--txt3)}
+
+.btn-cta{width:100%;padding:15px;border:1px solid var(--g);border-radius:4px;background:transparent;color:var(--g);font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:2px;cursor:pointer;box-shadow:0 0 20px var(--g3),inset 0 0 20px rgba(0,255,136,.03);transition:all .2s;position:relative;overflow:hidden;margin-top:8px;clip-path:polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)}
+.btn-cta::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,255,136,.14),transparent);transition:left .4s}
+.btn-cta:hover{background:var(--g3);box-shadow:0 0 40px var(--g3)}
+.btn-cta:hover::before{left:100%}
+.btn-cta:active{transform:scale(.98)}
+.btn-cta:disabled{opacity:.4;cursor:not-allowed}
+
+.auth-alt{text-align:center;margin-top:22px;font-family:var(--mono);font-size:11px;color:var(--txt3);letter-spacing:.5px}
+.auth-alt span{color:var(--g);cursor:pointer}
+.err-msg{background:rgba(255,45,85,.07);border:1px solid rgba(255,45,85,.3);border-radius:4px;padding:10px 14px;font-family:var(--mono);font-size:11px;color:var(--r2);margin-bottom:14px;display:none;letter-spacing:.3px}
+.err-msg::before{content:'[ERR] ';color:var(--r)}
+
+/* ── HEADER ── */
+.dash-header{padding:13px 18px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;background:rgba(2,5,9,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--rim);overflow:hidden}
+.dash-header::after{content:'';position:absolute;bottom:-1px;left:0;height:1px;width:35%;background:linear-gradient(90deg,var(--g),transparent);animation:scanL 4s ease-in-out infinite}
+@keyframes scanL{0%{left:0;width:30%}50%{left:35%;width:40%}100%{left:65%;width:35%}}
+.h-brand{display:flex;align-items:center;gap:10px}
+.h-mark{width:30px;height:30px;border-radius:3px;background:var(--g3);border:1px solid var(--grim);display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 0 12px var(--g3)}
+.h-name{font-family:var(--head);font-size:12px;font-weight:700;letter-spacing:2px}
+.h-name b{color:var(--g);text-shadow:0 0 10px var(--g)}
+.h-right{display:flex;align-items:center;gap:8px}
+.cred-pill{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--grim);border-radius:3px;padding:5px 12px;box-shadow:0 0 10px var(--g3)}
+.cred-dot{width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 8px var(--g);animation:blink 1.4s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.cred-num{font-family:var(--mono);font-size:12px;color:var(--g);letter-spacing:1px}
+.av-btn{width:32px;height:32px;border-radius:3px;background:var(--g4);border:1px solid var(--grim);display:flex;align-items:center;justify-content:center;font-family:var(--head);font-weight:700;font-size:12px;color:var(--g);cursor:pointer}
+
+/* ── NAV ── */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:300;background:rgba(3,8,16,.96);backdrop-filter:blur(24px);border-top:1px solid var(--rim);display:flex;padding:10px 0 26px}
+.nav::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);opacity:.35}
+.nb{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;padding:5px 0;color:var(--txt3);font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;transition:color .2s;position:relative}
+.nb.on{color:var(--g);text-shadow:0 0 8px var(--g)}
+.nb.on .ni{filter:drop-shadow(0 0 5px var(--g))}
+.nb.on::after{content:'';position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:20px;height:2px;border-radius:2px;background:var(--g);box-shadow:0 0 10px var(--g)}
+.ni{font-size:19px;line-height:1}
+
+/* ── CONTENT ── */
+.content{padding:20px 18px 110px}
+.tab{display:none}
+.tab.active{display:block}
+
+.pg-label{font-family:var(--mono);font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--txt3);margin-bottom:16px}
+.pg-label::before{content:'// ';color:var(--g);opacity:.5}
+.sys-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,255,136,.06);border:1px solid var(--grim);border-radius:3px;padding:5px 14px;margin-bottom:20px;font-family:var(--mono);font-size:10px;color:var(--g);letter-spacing:2px;box-shadow:0 0 12px var(--g3)}
+.pdot{width:6px;height:6px;border-radius:50%;background:var(--g);box-shadow:0 0 8px var(--g);animation:blink 1.4s step-end infinite}
+
+/* Glass card */
+.gcard{background:var(--card);border:1px solid var(--rim);border-radius:4px;padding:18px;margin-bottom:10px;position:relative;overflow:hidden;clip-path:polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px)}
+.gcard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--g),transparent 55%);opacity:.45}
+.gcard::after{content:'';position:absolute;top:0;left:0;border-top:12px solid;border-right:12px solid transparent;border-top-color:var(--g);opacity:.35}
+.gcard:focus-within{border-color:var(--g2);box-shadow:0 0 20px var(--g3)}
+.clabel{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--txt3);margin-bottom:13px;display:flex;align-items:center;gap:8px}
+.clabel-pip{width:3px;height:12px;background:var(--g);box-shadow:0 0 6px var(--g);border-radius:2px}
+
+/* Phone */
+.phone-row{display:flex;align-items:center;overflow:hidden;background:var(--card2);border:1px solid var(--rim2);border-radius:3px;transition:border-color .2s,box-shadow .2s}
+.phone-row:focus-within{border-color:var(--g);box-shadow:0 0 16px var(--g3)}
+.pcc{padding:13px 14px;font-family:var(--mono);font-size:13px;color:var(--g);border-right:1px solid var(--rim2);background:rgba(0,255,136,.05);white-space:nowrap;user-select:none}
+.pin{flex:1;background:transparent;border:none;outline:none;padding:13px 12px;color:var(--txt);font-family:var(--mono);font-size:15px;letter-spacing:2px}
+.pin::placeholder{color:var(--txt3);letter-spacing:1px}
+.pct{padding:0 12px;font-family:var(--mono);font-size:10px;color:var(--txt3)}
+
+/* Slider */
+.sl-wrap{display:flex;align-items:center;gap:12px}
+.sl-side{font-family:var(--mono);font-size:10px;color:var(--txt3);white-space:nowrap}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;border-radius:0;outline:none;cursor:pointer;background:linear-gradient(to right,var(--g) 0%,var(--g2) var(--pct,0%),var(--rim2) var(--pct,0%),var(--rim2) 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--g);cursor:pointer;box-shadow:0 0 0 3px rgba(2,5,9,.8),0 0 16px var(--g);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%)}
+.sl-val{min-width:38px;text-align:right;font-family:var(--mono);font-size:15px;color:var(--g);letter-spacing:1px}
+
+/* Req */
+.req-row{display:flex;align-items:center;gap:10px}
+.req-lbl{font-size:14px;color:var(--txt2);flex:1;font-weight:600;letter-spacing:.5px}
+.req-ctrl{display:flex;align-items:center}
+.req-btn{width:38px;height:42px;background:var(--card2);border:1px solid var(--rim2);color:var(--txt2);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.req-btn:first-child{border-radius:3px 0 0 3px;border-right:none}
+.req-btn:last-child{border-radius:0 3px 3px 0;border-left:none}
+.req-btn:active{background:var(--g3);color:var(--g)}
+.req-in{width:72px;height:42px;background:var(--card2);border:1px solid var(--rim2);border-left:none;border-right:none;text-align:center;outline:none;font-family:var(--mono);font-size:16px;color:var(--g);-moz-appearance:textfield}
+.req-in::-webkit-outer-spin-button,.req-in::-webkit-inner-spin-button{-webkit-appearance:none}
+.req-in:focus{background:var(--g4)}
+.mode-lbl{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;color:var(--txt3);text-transform:uppercase;margin-bottom:10px}
+.mode-row{display:flex;gap:6px}
+.mode-btn{flex:1;padding:10px;border-radius:3px;border:1px solid var(--rim2);background:var(--card2);color:var(--txt3);font-family:var(--mono);font-size:10px;letter-spacing:1.5px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.mode-btn.on{border-color:var(--g);color:var(--g);background:var(--g4);box-shadow:0 0 12px var(--g3)}
+
+/* Launch btn */
+.launch-btn{width:100%;padding:18px;border:1px solid var(--r);border-radius:4px;background:linear-gradient(135deg,rgba(255,45,85,.14),rgba(255,45,85,.07));color:var(--r2);font-family:var(--head);font-size:13px;font-weight:700;letter-spacing:3px;cursor:pointer;margin-top:12px;position:relative;overflow:hidden;box-shadow:0 0 30px rgba(255,45,85,.18),inset 0 0 30px rgba(255,45,85,.04);transition:all .2s;clip-path:polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px);animation:lPulse 3s ease-in-out infinite}
+@keyframes lPulse{0%,100%{box-shadow:0 0 30px rgba(255,45,85,.18)}50%{box-shadow:0 0 55px rgba(255,45,85,.35)}}
+.launch-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,45,85,.14),transparent);transition:left .5s}
+.launch-btn:hover::before{left:100%}
+.launch-btn:hover{background:rgba(255,45,85,.18);color:var(--txt)}
+.launch-btn:active{transform:scale(.98)}
+.launch-btn:disabled{opacity:.4;cursor:not-allowed;animation:none}
+
+/* Result */
+.result-box{margin-top:12px;border-radius:4px;padding:18px;display:none;border:1px solid;position:relative;overflow:hidden}
+.result-box::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--g),transparent);opacity:.4}
+.result-box.show{display:block}
+.result-box.ok{background:rgba(0,255,136,.04);border-color:var(--grim)}
+.result-box.err{background:rgba(255,45,85,.04);border-color:rgba(255,45,85,.3)}
+.r-icon{font-size:26px;margin-bottom:10px}
+.r-title{font-family:var(--head);font-size:12px;font-weight:700;margin-bottom:6px;letter-spacing:1px}
+.r-sub{font-family:var(--mono);font-size:10px;color:var(--txt2);line-height:2;letter-spacing:.5px;white-space:pre-line}
+.result-box.ok .r-title{color:var(--g);text-shadow:0 0 12px var(--g)}
+.result-box.err .r-title{color:var(--r2)}
+.cr-row{display:flex;align-items:center;justify-content:space-between;background:var(--card2);border:1px solid var(--rim2);border-radius:3px;padding:11px 14px;margin-top:13px}
+.cr-lbl{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-bottom:4px}
+.cr-used{font-family:var(--mono);font-size:18px;color:var(--r2)}
+.cr-left{font-family:var(--mono);font-size:18px;color:var(--g);text-shadow:0 0 8px var(--g)}
+
+/* History */
+.mhist{margin-top:16px}
+.mhist-title{font-family:var(--mono);font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--txt3);margin-bottom:10px}
+.mhist-title::before{content:'// ';color:var(--g);opacity:.5}
+.hl-load{display:flex;align-items:center;gap:8px;padding:18px;color:var(--txt3);font-size:11px;justify-content:center;font-family:var(--mono)}
+.tx{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--rim3)}
+.tx:last-child{border-bottom:none}
+.tx-i{width:36px;height:36px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;border:1px solid}
+.tx-i.burst{background:rgba(255,45,85,.08);border-color:rgba(255,45,85,.2)}
+.tx-i.credit{background:rgba(0,255,136,.06);border-color:var(--grim)}
+.tx-i.signup{background:rgba(0,212,255,.06);border-color:rgba(0,212,255,.2)}
+.tx-d{flex:1;min-width:0}
+.tx-name{font-size:12px;font-weight:600;margin-bottom:2px;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.5px}
+.tx-time{font-family:var(--mono);font-size:9px;color:var(--txt3);letter-spacing:.5px}
+.tx-amt{font-family:var(--mono);font-size:12px;white-space:nowrap;flex-shrink:0}
+.tx-amt.neg{color:var(--r2)}
+.tx-amt.pos{color:var(--g);text-shadow:0 0 6px var(--g)}
+.tx-nil{text-align:center;padding:24px;font-family:var(--mono);font-size:11px;color:var(--txt3);letter-spacing:1px}
+
+/* Contact */
+.cc{background:var(--card);border:1px solid var(--rim);border-radius:4px;padding:18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;position:relative;clip-path:polygon(10px 0%,100% 0%,100% 100%,0% 100%,0% 10px);transition:border-color .2s}
+.cc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--g),transparent 50%);opacity:.35}
+.cc:hover{border-color:var(--grim)}
+.cc-ico{width:44px;height:44px;border-radius:3px;flex-shrink:0;background:var(--g4);border:1px solid var(--grim);display:flex;align-items:center;justify-content:center;font-size:20px}
+.cc-name{font-size:14px;font-weight:700;margin-bottom:3px;letter-spacing:.5px}
+.cc-val{font-family:var(--mono);font-size:11px;color:var(--g);letter-spacing:.3px}
+
+/* Plans */
+.p-notice{background:rgba(255,170,0,.06);border:1px solid rgba(255,170,0,.2);border-radius:4px;padding:13px 15px;margin-bottom:16px;display:flex;gap:10px;align-items:flex-start}
+.p-notice-icon{font-size:14px;flex-shrink:0;margin-top:2px}
+.p-notice-text{font-family:var(--mono);font-size:10px;color:rgba(255,170,0,.75);line-height:1.9;letter-spacing:.3px}
+.p-notice-text strong{color:#ffaa00}
+.p-free{background:rgba(0,255,136,.05);border:1px solid var(--grim);border-radius:4px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;box-shadow:0 0 16px var(--g3)}
+.p-free-ico{font-size:24px}
+.p-free-name{font-size:14px;font-weight:700;color:var(--g);letter-spacing:.5px}
+.p-free-sub{font-family:var(--mono);font-size:9px;color:var(--txt3);margin-top:3px;letter-spacing:1px}
+.pcard{background:var(--card);border:1px solid var(--rim);border-radius:4px;padding:20px;margin-bottom:12px;position:relative;overflow:hidden;clip-path:polygon(12px 0%,100% 0%,100% calc(100% - 12px),calc(100% - 12px) 100%,0% 100%,0% 12px);transition:border-color .25s,box-shadow .25s}
+.pcard::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--g),transparent 40%);opacity:.3}
+.pcard::after{content:'';position:absolute;top:0;left:0;border-top:12px solid;border-right:12px solid transparent;border-top-color:var(--g);opacity:.3}
+.pcard.hot{border-color:rgba(0,255,136,.3);box-shadow:0 0 30px var(--g3)}
+.p-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.p-name{font-family:var(--head);font-size:15px;font-weight:700;letter-spacing:1px}
+.p-hot-tag{background:transparent;color:var(--g);border:1px solid var(--grim);font-family:var(--mono);font-size:8px;padding:4px 11px;border-radius:2px;letter-spacing:2px;box-shadow:0 0 10px var(--g3)}
+.p-price-row{display:flex;align-items:baseline;gap:6px;margin-bottom:8px}
+.p-price{font-family:var(--head);font-size:38px;font-weight:900;letter-spacing:-1px;color:var(--g);text-shadow:0 0 20px var(--g)}
+.p-per{font-family:var(--mono);font-size:11px;color:var(--txt3);letter-spacing:.5px}
+.p-credits{font-family:var(--mono);font-size:12px;color:var(--c);margin-bottom:4px;letter-spacing:.5px}
+.p-valid{font-family:var(--mono);font-size:10px;color:var(--txt3);margin-bottom:16px;letter-spacing:.5px}
+.p-btn{width:100%;padding:13px;border-radius:3px;border:1px solid var(--g);background:var(--g4);color:var(--g);font-family:var(--head);font-weight:700;font-size:11px;letter-spacing:2px;cursor:pointer;box-shadow:0 0 16px var(--g3);transition:all .2s;position:relative;overflow:hidden;text-transform:uppercase}
+.p-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(0,255,136,.12),transparent);transition:left .4s}
+.p-btn:hover::before{left:100%}
+.p-btn:hover{background:rgba(0,255,136,.1);box-shadow:0 0 28px var(--g3)}
+.p-btn:active{opacity:.8}
+
+/* Profile */
+.prof-top{display:flex;flex-direction:column;align-items:center;padding:24px 0 20px;text-align:center}
+.prof-av{width:72px;height:72px;border-radius:3px;background:var(--g4);border:2px solid var(--g);display:flex;align-items:center;justify-content:center;font-family:var(--head);font-size:26px;font-weight:900;color:var(--g);margin-bottom:13px;box-shadow:0 0 30px var(--g3),inset 0 0 20px rgba(0,255,136,.04);text-shadow:0 0 20px var(--g);clip-path:polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px)}
+.prof-email{font-size:14px;font-weight:600;margin-bottom:4px;letter-spacing:.5px}
+.prof-since{font-family:var(--mono);font-size:10px;color:var(--txt3);letter-spacing:1px}
+.stat-row{display:flex;gap:10px;margin:16px 0}
+.stat-box{flex:1;background:var(--card);border:1px solid var(--rim);border-radius:4px;padding:16px;text-align:center;position:relative;overflow:hidden;clip-path:polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)}
+.stat-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--g),transparent);opacity:.6}
+.stat-val{font-family:var(--mono);font-size:26px;color:var(--g);text-shadow:0 0 12px var(--g)}
+.stat-lbl{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-top:6px}
+.lo-btn{width:100%;padding:15px;border-radius:4px;border:1px solid rgba(255,45,85,.3);background:transparent;color:var(--r2);font-family:var(--head);font-weight:600;font-size:12px;cursor:pointer;transition:all .2s;letter-spacing:2px;clip-path:polygon(8px 0%,100% 0%,100% calc(100% - 8px),calc(100% - 8px) 100%,0% 100%,0% 8px)}
+.lo-btn:active{background:rgba(255,45,85,.1)}
+
+/* Util */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,255,136,.15);border-top-color:var(--g);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:92px;left:50%;transform:translateX(-50%) translateY(8px);background:rgba(3,8,16,.96);border:1px solid var(--grim);color:var(--g);padding:10px 22px;border-radius:3px;font-family:var(--mono);font-size:11px;letter-spacing:1px;z-index:9999;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap;max-width:90vw;box-shadow:0 0 20px var(--g3)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* Stop button */
+.stop-btn{width:100%;padding:13px;border:1px solid var(--r);border-radius:4px;background:transparent;color:var(--r);font-family:var(--head);font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;margin-top:6px;position:relative;overflow:hidden;clip-path:polygon(10px 0%,100% 0%,100% calc(100% - 10px),calc(100% - 10px) 100%,0% 100%,0% 10px);transition:all .2s;display:none}
+.stop-btn.show{display:block}
+.stop-btn:hover{background:rgba(255,45,85,.12);box-shadow:0 0 20px rgba(255,45,85,.2)}
+.stop-btn:active{transform:scale(.98)}
+.stop-btn:disabled{opacity:.4;cursor:not-allowed}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+.shimmer-text{background:linear-gradient(90deg,var(--g2),var(--txt),var(--g));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 1.5s linear 3}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- LOGIN -->
+<div class="screen active" id="loginScreen">
+  <div class="auth-wrap">
+    <div class="auth-corner tl"></div><div class="auth-corner tr"></div>
+    <div class="auth-corner bl"></div><div class="auth-corner br"></div>
+    <div class="brand"><div class="brand-mark">⚡</div><div class="brand-name">SMS<b>BURST</b></div></div>
+    <div class="auth-sys">SECURE ACCESS TERMINAL</div>
+    <div class="auth-h1">SIGN <span class="hi">IN</span></div>
+    <div class="auth-sub">Enter credentials to access your control panel.</div>
+    <div class="err-msg" id="loginErr"></div>
+    <div class="field"><label>// email address</label><input type="email" id="loginEmail" placeholder="operator@domain.com" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="field"><label>// password</label><input type="password" id="loginPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-cta" id="loginBtn" onclick="doLogin()">ACCESS PANEL</button>
+    <div class="auth-alt">No account? <span onclick="gotoSignup()">[ REGISTER ]</span></div>
+  </div>
+</div>
+
+<!-- SIGNUP -->
+<div class="screen" id="signupScreen">
+  <div class="auth-wrap">
+    <div class="auth-corner tl"></div><div class="auth-corner tr"></div>
+    <div class="auth-corner bl"></div><div class="auth-corner br"></div>
+    <div class="brand"><div class="brand-mark">⚡</div><div class="brand-name">SMS<b>BURST</b></div></div>
+    <div class="auth-sys">NEW OPERATOR REGISTRATION</div>
+    <div class="auth-h1">GET <span class="hi">ACCESS</span></div>
+    <div class="auth-sub">Create your account. Receive 2,000 credits instantly — free.</div>
+    <div class="err-msg" id="signupErr"></div>
+    <div class="field"><label>// email address</label><input type="email" id="signupEmail" placeholder="operator@domain.com"></div>
+    <div class="field"><label>// password (min 6)</label><input type="password" id="signupPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doSignup()"></div>
+    <button class="btn-cta" id="signupBtn" onclick="doSignup()">INITIALIZE ACCOUNT</button>
+    <div class="auth-alt">Have an account? <span onclick="gotoLogin()">[ LOGIN ]</span></div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="screen" id="dashScreen">
+  <div class="dash-header">
+    <div class="h-brand"><div class="h-mark">⚡</div><div class="h-name">SMS<b>BURST</b></div></div>
+    <div class="h-right">
+      <div class="cred-pill"><div class="cred-dot"></div><span class="cred-num" id="creditsDisplay">0</span></div>
+      <div class="av-btn" id="userAvatar">U</div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- PANEL -->
+    <div class="tab active" id="tab-panel">
+      <div class="pg-label">Control Panel</div>
+      <div class="sys-badge"><div class="pdot"></div>SYSTEM ONLINE</div>
+
+      <div class="gcard">
+        <div class="clabel"><div class="clabel-pip"></div>Target Number</div>
+        <div class="phone-row">
+          <div class="pcc">+91</div>
+          <input class="pin" type="tel" id="phoneInput" maxlength="10" placeholder="9977885544" oninput="onPhone(this)">
+          <div class="pct" id="phoneCount">0/10</div>
+        </div>
+      </div>
+
+      <div class="gcard">
+        <div class="clabel"><div class="clabel-pip"></div>Delay Between Requests</div>
+        <div class="sl-wrap">
+          <div class="sl-side">0.5s</div>
+          <input type="range" id="delaySlider" min="0.5" max="5.0" step="0.1" value="0.5" oninput="onSlider(this)">
+          <div class="sl-val" id="delayVal">0.5s</div>
+        </div>
+      </div>
+
+      <div class="gcard">
+        <div class="clabel"><div class="clabel-pip"></div>Messages to Send</div>
+        <div class="req-row">
+          <div class="req-lbl">Total Requests</div>
+          <div class="req-ctrl">
+            <button class="req-btn" onclick="chgReq(-1)">−</button>
+            <input class="req-in" type="number" id="reqInput" value="10" min="1" max="9999" oninput="clampReq(this)" onblur="clampReq(this)">
+            <button class="req-btn" onclick="chgReq(1)">+</button>
+          </div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="mode-lbl">// Attack Mode</div>
+          <div class="mode-row">
+            <button class="mode-btn on" onclick="setMode(this,'Normal')">Normal</button>
+            <button class="mode-btn" onclick="setMode(this,'Fast')">Fast</button>
+            <button class="mode-btn" onclick="setMode(this,'Turbo')">Turbo</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="launch-btn" id="launchBtn" onclick="doLaunch()">⚡ LAUNCH ATTACK</button>
+      <button class="stop-btn" id="stopBtn" onclick="doStop()">■ STOP ATTACK</button>
+
+      <div class="result-box" id="resultBox">
+        <div class="r-title" id="resultTitle"></div>
+        <div class="r-sub" id="resultSub"></div>
+        <div class="cr-row" id="creditRow" style="display:none">
+          <div><div class="cr-lbl">Credits Used</div><div class="cr-used" id="cuUsed"></div></div>
+          <div style="text-align:right"><div class="cr-lbl">Credits Left</div><div class="cr-left" id="cuLeft"></div></div>
+        </div>
+      </div>
+
+      <div class="mhist">
+        <div class="mhist-title">Transaction Log</div>
+        <div class="gcard" style="padding:0 18px" id="miniHistList">
+          <div class="hl-load"><span class="spinner"></span>Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTACT -->
+    <div class="tab" id="tab-contact">
+      <div class="pg-label">Contact & Support</div>
+      <div class="cc"><div class="cc-ico">📧</div><div><div class="cc-name">Email Support</div><div class="cc-val">support@smsburst.online</div></div></div>
+      <div class="cc"><div class="cc-ico">💬</div><div><div class="cc-name">Telegram</div><div class="cc-val">@smsbursthelp_bot</div></div></div>
+      <div class="cc"><div class="cc-ico">⏰</div><div><div class="cc-name">Response Time</div><div class="cc-val">Within 24 hour</div></div></div>
+    </div>
+
+    <!-- PLANS -->
+    <div class="tab" id="tab-buy">
+      <div class="pg-label">Plans & Credits</div>
+      <div class="p-notice"><div class="p-notice-icon">⚠</div><div class="p-notice-text"><strong>Manual allocation only.</strong> After payment, contact us via Telegram or Email with proof. Credits added within 1 hour.</div></div>
+      <div class="p-free"><div class="p-free-ico">🎁</div><div><div class="p-free-name">FREE — 2,000 CREDITS</div><div class="p-free-sub">On signup · Never expires</div></div></div>
+      <div class="pcard">
+        <div class="p-head"><div class="p-name">STARTER</div></div>
+        <div class="p-price-row"><div class="p-price">₹9</div><div class="p-per">/plan</div></div>
+        <div class="p-credits">⚡ 8,000 Credits</div><div class="p-valid">// Valid 30 days</div>
+        <button class="p-btn" onclick="requestPlan('Starter','₹9')">REQUEST STARTER</button>
+      </div>
+      <div class="pcard hot">
+        <div class="p-head"><div class="p-name">PRO</div><div class="p-hot-tag">POPULAR</div></div>
+        <div class="p-price-row"><div class="p-price">₹25</div><div class="p-per">/plan</div></div>
+        <div class="p-credits">⚡ 26,000 Credits</div><div class="p-valid">// Valid 30 days</div>
+        <button class="p-btn" onclick="requestPlan('Pro','₹25')">REQUEST PRO</button>
+      </div>
+      <div class="pcard">
+        <div class="p-head"><div class="p-name">ADVANCED</div></div>
+        <div class="p-price-row"><div class="p-price">₹49</div><div class="p-per">/plan</div></div>
+        <div class="p-credits">⚡ 55,000 Credits</div><div class="p-valid">// Valid 30 days</div>
+        <button class="p-btn" onclick="requestPlan('Advanced','₹49')">REQUEST ADVANCED</button>
+      </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="tab" id="tab-profile">
+      <div class="pg-label">Operator Profile</div>
+      <div class="prof-top">
+        <div class="prof-av" id="profileAv">U</div>
+        <div class="prof-email" id="profileEmail">—</div>
+        <div class="prof-since" id="profileSince">// member since —</div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-box"><div class="stat-val" id="statCredits">—</div><div class="stat-lbl">Credits Left</div></div>
+        <div class="stat-box"><div class="stat-val" id="statBursts">—</div><div class="stat-lbl">Bursts Sent</div></div>
+      </div>
+      <button class="lo-btn" onclick="doLogout()">SIGN OUT</button>
+    </div>
+
+  </div>
+
+  <div class="nav">
+    <div class="nb on" onclick="switchTab('panel',this)"><div class="ni">⚡</div>Panel</div>
+    <div class="nb" onclick="switchTab('contact',this)"><div class="ni">💬</div>Contact</div>
+    <div class="nb" onclick="switchTab('buy',this)"><div class="ni">💎</div>Plans</div>
+    <div class="nb" onclick="switchTab('profile',this);loadProfile()"><div class="ni">👤</div>Profile</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API='http://localhost:3000';
+let token=localStorage.getItem('token')||null;
+let activeMode='Normal';
+let currentJobId=null;
+
+(async()=>{
+  if(token){try{const u=await req('/api/me');setUser(u);showDash();loadMiniHistory()}catch{token=null;localStorage.removeItem('token')}}
+  document.getElementById('delaySlider').style.setProperty('--pct','0%');
+})();
+
+async function req(path,opts={}){
+  const h={'Content-Type':'application/json'};
+  if(token)h['Authorization']='Bearer '+token;
+  const r=await fetch(API+path,{headers:h,...opts});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'Request failed');
+  return d;
+}
+
+function gotoSignup(){document.getElementById('loginScreen').classList.remove('active');document.getElementById('signupScreen').classList.add('active')}
+function gotoLogin(){document.getElementById('signupScreen').classList.remove('active');document.getElementById('loginScreen').classList.add('active')}
+
+async function doLogin(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const pass=document.getElementById('loginPass').value;
+  const eEl=document.getElementById('loginErr'),btn=document.getElementById('loginBtn');
+  eEl.style.display='none';
+  if(!email||!pass){eEl.textContent='Please fill all fields.';eEl.style.display='block';return}
+  btn.innerHTML='<span class="spinner"></span>AUTHENTICATING…';btn.disabled=true;
+  // Try up to 2 times — first attempt may fail on cold start
+  for(let attempt=1;attempt<=2;attempt++){
+    try{
+      const d=await req('/api/login',{method:'POST',body:JSON.stringify({email,password:pass})});
+      token=d.token;localStorage.setItem('token',token);setUser(d.user);showDash();loadMiniHistory();
+      btn.innerHTML='ACCESS PANEL';btn.disabled=false;
+      return;
+    }catch(e){
+      if(attempt===1 && e.message.toLowerCase().includes('server')){
+        btn.innerHTML='<span class="spinner"></span>RETRYING…';
+        await new Promise(r=>setTimeout(r,1800));
+      } else {
+        eEl.textContent=e.message;eEl.style.display='block';
+        btn.innerHTML='ACCESS PANEL';btn.disabled=false;
+        return;
+      }
+    }
+  }
+}
+
+async function doSignup(){
+  const email=document.getElementById('signupEmail').value.trim();
+  const pass=document.getElementById('signupPass').value;
+  const eEl=document.getElementById('signupErr'),btn=document.getElementById('signupBtn');
+  eEl.style.display='none';
+  if(!email||!pass){eEl.textContent='Please fill all fields.';eEl.style.display='block';return}
+  if(pass.length<6){eEl.textContent='Password must be 6+ characters.';eEl.style.display='block';return}
+  btn.innerHTML='<span class="spinner"></span>INITIALIZING…';btn.disabled=true;
+  try{const d=await req('/api/signup',{method:'POST',body:JSON.stringify({email,password:pass})});token=d.token;localStorage.setItem('token',token);setUser(d.user);showDash();loadMiniHistory();toast('[ 2,000 FREE CREDITS ALLOCATED ]')}
+  catch(e){eEl.textContent=e.message;eEl.style.display='block'}
+  btn.innerHTML='INITIALIZE ACCOUNT';btn.disabled=false;
+}
+
+function setUser(u){document.getElementById('userAvatar').textContent=u.email[0].toUpperCase();document.getElementById('creditsDisplay').textContent=(+u.credits||0).toLocaleString()}
+function showDash(){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('dashScreen').classList.add('active')}
+function doLogout(){token=null;localStorage.removeItem('token');document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById('loginScreen').classList.add('active');document.getElementById('loginEmail').value='';document.getElementById('loginPass').value='';toast('[ SESSION TERMINATED ]')}
+function switchTab(name,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.nb').forEach(n=>n.classList.remove('on'));document.getElementById('tab-'+name).classList.add('active');el.classList.add('on')}
+function onPhone(inp){inp.value=inp.value.replace(/\D/g,'').slice(0,10);document.getElementById('phoneCount').textContent=inp.value.length+'/10'}
+function onSlider(inp){const v=parseFloat(inp.value).toFixed(1);document.getElementById('delayVal').textContent=v+'s';inp.style.setProperty('--pct',((inp.value-0.5)/4.5*100)+'%')}
+function getReq(){return Math.max(1,Math.min(9999,parseInt(document.getElementById('reqInput').value)||1))}
+function chgReq(d){const i=document.getElementById('reqInput');i.value=Math.max(1,Math.min(9999,(parseInt(i.value)||1)+d))}
+function clampReq(i){let v=parseInt(i.value);if(isNaN(v)||v<1)v=1;if(v>9999)v=9999;i.value=v}
+function setMode(btn,m){document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');activeMode=m}
+
+async function doLaunch(){
+  const phone=document.getElementById('phoneInput').value.trim();
+  const delay=parseFloat(document.getElementById('delaySlider').value);
+  const maxR=getReq();
+  const btn=document.getElementById('launchBtn'),rBox=document.getElementById('resultBox');
+  const stopBtn=document.getElementById('stopBtn');
+  if(phone.length!==10){toast('[ ERROR: Enter valid 10-digit number ]');return}
+  btn.innerHTML='<span class="spinner"></span>LAUNCHING…';btn.disabled=true;
+  stopBtn.classList.remove('show');
+  rBox.className='result-box';
+  try{
+    const d=await req('/api/burst',{method:'POST',body:JSON.stringify({phone,delay,max_requests:maxR,mode:activeMode})});
+    currentJobId=d.job_id||null;
+    const title=document.getElementById('resultTitle');
+    
+    title.textContent='ATTACK LAUNCHED SUCCESSFULLY';
+    title.classList.add('shimmer-text');
+    setTimeout(()=>title.classList.remove('shimmer-text'),5000);
+    document.getElementById('resultSub').textContent=`TARGET: +91 ${phone}\nREQUESTS: ${maxR}  ·  DELAY: ${delay}s  ·  MODE: ${activeMode}`;
+    document.getElementById('creditRow').style.display='flex';
+    document.getElementById('cuUsed').textContent='-'+maxR.toLocaleString();
+    document.getElementById('cuLeft').textContent=d.credits_remaining.toLocaleString();
+    document.getElementById('creditsDisplay').textContent=d.credits_remaining.toLocaleString();
+    rBox.className='result-box show ok';
+    // Show stop button only if we have a job_id
+    if(currentJobId){ stopBtn.classList.add('show'); stopBtn.disabled=false; }
+    loadMiniHistory();
+  }catch(e){
+    document.getElementById('resultTitle').textContent='LAUNCH FAILED';
+    document.getElementById('resultSub').textContent=e.message;
+    document.getElementById('creditRow').style.display='none';
+    rBox.className='result-box show err';
+  }
+  btn.innerHTML='⚡ LAUNCH ATTACK';btn.disabled=false;
+}
+
+async function doStop(){
+  if(!currentJobId){toast('[ No active job to stop ]');return}
+  const btn=document.getElementById('stopBtn');
+  btn.innerHTML='<span class="spinner"></span>STOPPING…';btn.disabled=true;
+  try{
+    await req('/api/burst/stop',{method:'POST',body:JSON.stringify({job_id:currentJobId})});
+    toast('[ ATTACK STOPPED ]');
+    document.getElementById('resultTitle').textContent='ATTACK STOPPED';
+    document.getElementById('resultSub').textContent=`Job ${currentJobId} terminated.`;
+    document.getElementById('resultBox').className='result-box show err';
+    btn.classList.remove('show');
+    currentJobId=null;
+  }catch(e){
+    toast('[ STOP FAILED: '+e.message+' ]');
+    btn.innerHTML='⛔ STOP ATTACK';btn.disabled=false;
+  }
+}
+
+async function loadMiniHistory(){
+  const list=document.getElementById('miniHistList');
+  list.innerHTML='<div class="hl-load"><span class="spinner"></span>Loading…</div>';
+  try{
+    const d=await req('/api/history');
+    const txns=d.transactions||[];
+    if(!txns.length){list.innerHTML='<div class="tx-nil">// No transactions yet</div>';return}
+    list.innerHTML=txns.map(tx=>{
+      const isDebit=tx.type==='burst';
+      const ico=tx.type==='burst'?'🚀':tx.type==='signup'?'🎁':'💳';
+      const cls=tx.type==='burst'?'burst':tx.type==='signup'?'signup':'credit';
+      const amt=isDebit?`<div class="tx-amt neg">−${Number(tx.amount).toLocaleString()}</div>`:`<div class="tx-amt pos">+${Number(tx.amount).toLocaleString()}</div>`;
+      const when=new Date(tx.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      return `<div class="tx"><div class="tx-i ${cls}">${ico}</div><div class="tx-d"><div class="tx-name">${tx.description}</div><div class="tx-time">${when}</div></div>${amt}</div>`;
+    }).join('');
+  }catch(e){list.innerHTML=`<div class="tx-nil">// ${e.message}</div>`}
+}
+
+async function loadProfile(){
+  try{
+    const d=await req('/api/me');
+    document.getElementById('profileAv').textContent=d.email[0].toUpperCase();
+    document.getElementById('profileEmail').textContent=d.email;
+    document.getElementById('profileSince').textContent='// member since '+new Date(d.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+    document.getElementById('statCredits').textContent=(+d.credits||0).toLocaleString();
+    document.getElementById('statBursts').textContent=(d.burst_count||0).toLocaleString();
+  }catch(_){}
+}
+
+function requestPlan(name,price){toast(`[ Contact us for ${name} plan — ${price} ]`);setTimeout(()=>{switchTab('contact',document.querySelectorAll('.nb')[1])},1200)}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200)}
+</script>
+</body>
+</html>
